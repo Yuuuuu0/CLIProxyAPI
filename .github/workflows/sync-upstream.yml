@@ -33,8 +33,22 @@ jobs:
             echo "merged=true" >> $GITHUB_OUTPUT
           else
             echo "Merge conflict detected, attempting to resolve..."
-            git merge --abort
-            echo "merged=false" >> $GITHUB_OUTPUT
+            
+            # Check if only README.md has conflicts
+            conflicted_files=$(git diff --name-only --diff-filter=U)
+            
+            if [ "$conflicted_files" = "README.md" ]; then
+              echo "Only README.md has conflicts, using ours (fork version)..."
+              git checkout --ours README.md
+              git add README.md
+              git commit -m "Merge upstream/main, keep fork README"
+              echo "merged=true" >> $GITHUB_OUTPUT
+            else
+              echo "Conflicts in files other than README.md: $conflicted_files"
+              echo "Cannot auto-resolve, aborting merge"
+              git merge --abort
+              echo "merged=false" >> $GITHUB_OUTPUT
+            fi
           fi
 
       - name: Push changes
